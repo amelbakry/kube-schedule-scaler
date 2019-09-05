@@ -14,6 +14,7 @@ RUN pip3 install --upgrade pip requests setuptools pipenv
 RUN pip3 install pykube
 RUN pip3 install python-crontab
 RUN pip3 install croniter
+RUN pip3 install boto3
 RUN apt-get update &&  apt-get install -y apt-transport-https curl gnupg sudo \
     && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 RUN sudo touch /etc/apt/sources.list.d/kubernetes.list \
