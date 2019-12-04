@@ -101,7 +101,7 @@ def deploy_job_creator():
             script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (deployment, i), "w")
             script_creator.write(deployment_script)
             script_creator.close()
-            cmd = ['sleep 50 ; . /root/.profile ; /usr/bin/python', script_creator.name,
+            cmd = ['. /root/.profile ; /usr/bin/python', script_creator.name,
                    '2>&1 | tee -a /tmp/scale_activities.log']
             cmd = ' '.join(map(str, cmd))
             scaling_cron = CronTab(user='root')
