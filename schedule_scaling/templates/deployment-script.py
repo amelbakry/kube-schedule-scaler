@@ -32,7 +32,9 @@ if replicas != None:
 
 try:
     hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
-except:
+except Exception as e:
+    print('HorizontalPodAutoscaler update failed for deployment %(name)s in namespace %(namespace)s')
+    print(e)
     hpa = None
 
 if hpa:
