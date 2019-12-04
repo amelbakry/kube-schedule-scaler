@@ -30,4 +30,7 @@ echo "
 /usr/bin/python /root/run_missed_jobs.py  >> /tmp/scale_activities.log
 
 # Getting the Scaling Activities
-tail -f /tmp/scale_activities.log
+touch /tmp/scalingjob.log
+touch /tmp/scale_activities.log
+tail -f /tmp/scale_activities.log &
+tail -f /tmp/scalingjob.log
