@@ -11,7 +11,7 @@ import boto3
 from crontab import CronTab
 
 EXECUTION_TIME = 'datetime.datetime.now().strftime("%d-%m-%Y %H:%M UTC")'
-
+crontab_instance = CronTab(user="root")
 
 def create_job_directory():
     """ This directory will hold the temp python scripts to execute the scaling jobs """
@@ -24,10 +24,14 @@ def create_job_directory():
 def clear_cron():
     """ This is needed so that if any one removes his scaling action
           it should not be trigger again """
-    my_cron = CronTab(user='root')
-    my_cron.remove_all(comment="Scheduling_Jobs")
-    my_cron.write()
+    crontab_instance.remove_all(comment="Scheduling_Jobs")
 
+def commit():
+    try:
+        crontab_instance.write()
+    except Exception as e:
+        print("An exception has been raised while trying to commit the crontab changes")
+        print(e)
 
 def get_kube_api():
     """ Initiating the API from Service Account or when running locally from ~/.kube/config """
@@ -102,15 +106,13 @@ def deploy_job_creator():
             cmd = ['. /root/.profile ; /usr/bin/python', script_creator.name,
                    '2>&1 | tee -a /tmp/scale_activities.log']
             cmd = ' '.join(map(str, cmd))
-            scaling_cron = CronTab(user='root')
-            job = scaling_cron.new(command=cmd)
+            job = crontab_instance.new(command=cmd)
             try:
                 job.setall(schedule)
                 job.set_comment("Scheduling_Jobs")
-                scaling_cron.write()
             except Exception:
                 print('Deployment: %s has syntax error in the schedule' % (deployment))
-                pass
+                job.delete()
 
 def parse_content(content, identifier):
     if content == None:
@@ -187,3 +189,4 @@ if __name__ == '__main__':
     create_job_directory()
     clear_cron()
     deploy_job_creator()
+    commit()
