@@ -1,37 +1,69 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-schedule-scaler
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: operator
-  namespace: default
-
+  name: kube-schedule-scaler
+  namespace: kube-schedule-scaler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-schedule-scaler
+subjects:
+- kind: ServiceAccount
+  name: kube-schedule-scaler
+  namespace: kube-schedule-scaler
+roleRef:
+  kind: ClusterRole
+  name: kube-schedule-scaler
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-schedule-scaler
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
+- apiGroups: ["extensions"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "patch"]
+- apiGroups: ["autoscaling", "extensions"]
+  resources:
+    - horizontalpodautoscalers
+  verbs: ["get", "list", "patch"]
+---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   labels:
-    application: kube-schedule-scaler
-    version: v0.1
+    app: kube-schedule-scaler
   name: kube-schedule-scaler
+  namespace: kube-schedule-scaler
 spec:
   replicas: 1
   selector:
     matchLabels:
-      application: kube-schedule-scaler
+      app: kube-schedule-scaler
   template:
     metadata:
       labels:
-        application: kube-schedule-scaler
-        version: v0.1
-      annotations:
-        iam.amazonaws.com/role: "s3-scaling-definitions"
+        app: kube-schedule-scaler
     spec:
-      serviceAccountName: operator
+      serviceAccountName: kube-schedule-scaler
       containers:
       - name: kube-schedule-scaler
-        image: "{{{IMAGE}}}"
+        image: "citizensadvice/kube-schedule-scaler:latest"
+        imagePullPolicy: Always
         resources:
           limits:
-            cpu: 1000m
-            memory: 500Mi
+            memory: 512Mi
           requests:
-            cpu: 500m
-            memory: 500Mi 
+            cpu: 200m
+            memory: 512Mi
