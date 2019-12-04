@@ -1,4 +1,4 @@
-""" Collecting Stacks & Deployments configured for Scaling """
+""" Collecting Deployments configured for Scaling """
 import os
 import pathlib
 import json
@@ -8,8 +8,6 @@ import pykube
 import re
 import urllib.request
 import boto3
-from resources.Stack import Stack
-from resources.Stackset import StackSet
 from crontab import CronTab
 
 EXECUTION_TIME = 'datetime.datetime.now().strftime("%d-%m-%Y %H:%M UTC")'
@@ -114,88 +112,6 @@ def deploy_job_creator():
                 print('Deployment: %s has syntax error in the schedule' % (deployment))
                 pass
 
-
-def stacks_to_scale():
-    '''
-    Getting the Stacks configured for schedule scaling...
-    '''
-    api = get_kube_api()
-    stacks = []
-    stacks_scaling_dict = {}
-    for namespace in list(pykube.Namespace.objects(api)):
-        namespace = str(namespace)
-        for stackset in StackSet.objects(api).filter(namespace=namespace):
-            annotations = stackset.metadata.get('annotations', {})
-
-            schedule_actions = annotations.get('zalando.org/schedule-actions', None)
-
-            f_stack = str(namespace + '/' + str(stackset))
-
-            schedule_actions = parse_content(schedule_actions, f_stack)
-
-            if schedule_actions is None or len(schedule_actions) == 0:
-                continue
-
-            stackset_stacks = list(Stack.objects(api).filter(namespace=namespace, selector={'stackset': stackset}))
-            stack_names = list(map(lambda stack: namespace + '/' + stack.metadata.get('name'), stackset_stacks))
-
-            stacks.append([stackset.metadata['name']])
-
-            for stack_name in stack_names:
-                stacks_scaling_dict[stack_name] = schedule_actions
-    if not stacks:
-        logging.info('No stack is configured for schedule scaling')
-
-    return stacks_scaling_dict
-
-
-def stack_job_creator():
-    """ Create CronJobs for configured Stacks """
-
-    stacks__to_scale = stacks_to_scale()
-    print("Stacks collected for scaling: ")
-    for stacks, schedules in stacks__to_scale.items():
-        stack = stacks.split("/")[1]
-        namespace = stacks.split("/")[0]
-        for n in range(len(schedules)):
-            schedules_n = schedules[n]
-            replicas = schedules_n.get('replicas', None)
-            minReplicas = schedules_n.get('minReplicas', None)
-            maxReplicas = schedules_n.get('maxReplicas', None)
-            schedule = schedules_n.get('schedule', None)
-
-            print("Stack: %s, Namespace: %s, Replicas: %s, MinReplicas: %s, MaxReplicas: %s, minSchedule: %s" %
-                  (stack, namespace, replicas, minReplicas, maxReplicas, schedule))
-
-            with open("/root/schedule_scaling/templates/stack-script.py", 'r') as script:
-                script = script.read()
-            stack_script = script % {
-                'namespace': namespace,
-                'name': stack,
-                'replicas': replicas,
-                'minReplicas': minReplicas,
-                'maxReplicas': maxReplicas,
-                'time': EXECUTION_TIME,
-            }
-            i = 0
-            while os.path.exists("/tmp/scaling_jobs/%s-%d.py" % (stack, i)):
-                i += 1
-            script_creator = open("/tmp/scaling_jobs/%s-%d.py" % (stack, i), "w")
-            script_creator.write(stack_script)
-            script_creator.close()
-            cmd = ['sleep 50 ; . /root/.profile ; /usr/bin/python', script_creator.name,
-                   '2>&1 | tee -a /tmp/scale_activities.log']
-            cmd = ' '.join(map(str, cmd))
-            scaling_cron = CronTab(user='root')
-            job = scaling_cron.new(command=cmd)
-            try:
-                job.setall(schedule)
-                job.set_comment("Scheduling_Jobs")
-                scaling_cron.write()
-            except Exception:
-                print('Stack: %s has syntax error in the schedule' % (stack))
-                pass
-
 def parse_content(content, identifier):
     if content == None:
         return []
@@ -271,4 +187,3 @@ if __name__ == '__main__':
     create_job_directory()
     clear_cron()
     deploy_job_creator()
-    stack_job_creator()
