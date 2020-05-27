@@ -39,7 +39,7 @@ rules:
     - horizontalpodautoscalers
   verbs: ["get", "list", "patch"]
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
@@ -51,6 +51,7 @@ spec:
   selector:
     matchLabels:
       app: kube-schedule-scaler
+  revisionHistoryLimit: 10
   template:
     metadata:
       labels:

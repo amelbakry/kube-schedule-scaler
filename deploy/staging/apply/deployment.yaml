@@ -4,7 +4,7 @@ metadata:
   name: operator
   namespace: default
 
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
@@ -16,6 +16,7 @@ spec:
   selector:
     matchLabels:
       application: kube-schedule-scaler
+  revisionHistoryLimit: 10
   template:
     metadata:
       labels:
@@ -34,4 +35,4 @@ spec:
             memory: 500Mi
           requests:
             cpu: 500m
-            memory: 500Mi 
+            memory: 500Mi
