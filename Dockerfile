@@ -25,6 +25,8 @@ RUN sudo apt-get update \
 ADD schedule_scaling /root/schedule_scaling
 COPY ./run_missed_jobs.py /root
 RUN chmod a+x /root/run_missed_jobs.py
+# allow us to override pykube.Deployment with the correct api version
+COPY ./cadeployment.py /root/schedule_scaling
 COPY ./startup.sh /root
 RUN chmod a+x /root/startup.sh
 CMD /root/startup.sh
