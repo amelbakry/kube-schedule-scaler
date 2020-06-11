@@ -2,7 +2,7 @@ import pykube
 import operator
 import time
 import datetime
-import cadeployment
+import resources
 
 def get_kube_api():
     try:
@@ -15,7 +15,7 @@ def get_kube_api():
 
 
 api = get_kube_api()
-deployment = cadeployment.CADeployment.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
+deployment = resources.Deployment.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
 
 replicas = %(replicas)s
 minReplicas = %(minReplicas)s
