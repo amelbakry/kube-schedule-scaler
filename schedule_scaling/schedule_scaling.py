@@ -104,7 +104,7 @@ def deploy_job_creator():
             script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (deployment, i), "w")
             script_creator.write(deployment_script)
             script_creator.close()
-            cmd = ['/usr/bin/env python', script_creator.name, '2>&1 | tee -a /tmp/scale_activities.log']
+            cmd = ['/usr/bin/env python', script_creator.name, '2>&1 >> /tmp/scale_activities.log']
             cmd = ' '.join(map(str, cmd))
             job = crontab_instance.new(command=cmd)
             try:
