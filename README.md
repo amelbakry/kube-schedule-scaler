@@ -1,37 +1,17 @@
 ﻿# Kubernetes Schedule Scaler
 
-This Application/ Kubernetes controller is used to schedule scale deployments and other custom resources in the cluster like Stackset based in annotations.
-The controller can work in conjunction with hpa. if hpa is configured the controller can adjust minReplicas and maxReplicas.
-At the moment it supports reading the scaling definitions from:
-  - directly in the annotations
-  - JSON files in S3 bucket
-    - The S3 bucket should be exist and the controller/pod should have read access to the bucket. by
-      Using this way you do not have to redeploy your application if you need to change the scaling definitions
-
+Kubernetes Schedule Scaler allows you to change the number of running replicas
+of a Deployment at specific times. A common use case is to turn down applications
+that don't need to be available 24/7 to reduce cluster resource utilization.
 
 ## Usage
 
-
-Just add the annotation to either your `Deployment` or `Stackset`.
+Just add the annotation to either your `Deployment`.
 
 ```
   annotations:
     zalando.org/schedule-actions: '[{"schedule": "10 18 * * *", "replicas": "3"}]'
 ```
-
-or
-
-you can add your scaling definitions in json file and upload the file to S3 bucket.
-
-```
-  annotations:
-    zalando.org/schedule-actions: s3://schedule-scaling/catalog.json
-```
-Note:
-  - The controller should have access to the bucket s3://schedule-scaling/
-  - Example of the JSON files are in the folder s3-json-files/
-## Available Fields 
-
 The following fields are available
 * `schedule` - Typical crontab format
 * `replicas` - the number of replicas to scale to
@@ -58,22 +38,6 @@ metadata:
       ]
 ```
 
-
-
-### StackSet Example
-
-```bash
-apiVersion: zalando.org/v1
-kind: StackSet
-metadata:
-  name: {{{APPLICATION_NAME}}}
-  labels:
-    application: "{{{APPLICATION}}}"
-    stage: "{{{STAGE}}}"
-  annotations:
-    zalando.org/schedule-actions: '[{"schedule": "00 06 * * *", "replicas": "20"}, {"schedule": "30 14 * * *", "replicas": "{{{REPLICAS}}}", "minReplicas": "{{{REPLICAS}}}"}]'
-```
-
 ## Debugging
 
 If your scaling action has not been executed for some reason, you can check with the below steps:
@@ -97,21 +61,12 @@ Stack pegasus-node-live has been scaled successfully to 80 minReplicas at 14-03-
 Stack pegasus-node-live has been scaled successfully to 40 minReplicas at 14-03-2019 21:00 UTC
 Stack pegasus-node-live has been scaled successfully to 120 minReplicas at 15-03-2019 05:30 UTC
 Stack pegasus-node-live has been scaled successfully to 80 minReplicas at 15-03-2019 07:00 UTC
-
 ```
 
-<p align="center">
-<img src="img/pods.png" alt="Pods" title="Pods" />
-</p>
-
+![Pods](image/pods.png)
 
 Check for specific deployment at specific time
 ```bash
 kubectl logs kube-schedule-scaler-87f9649f5-btnt7 | grep nginx-deployment-2 | grep "28-12-2018 09:50"
 Deployment nginx-deployment-2 has been scaled successfully to 4 replica at 28-12-2018 09:50 UTC
-```
-
-You can also check from scalyr side
-```bash
-$application == "kube-schedule-scaler" 'nginx-deployment-2'
 ```
