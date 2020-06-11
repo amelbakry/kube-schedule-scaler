@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ Collecting Deployments configured for Scaling """
 import os
 import pathlib
@@ -5,14 +6,13 @@ import json
 import logging
 import shutil
 import pykube
-import re
 import urllib.request
-import boto3
 import resources
 from crontab import CronTab
+from getpass import getuser
 
 EXECUTION_TIME = 'datetime.datetime.now().strftime("%d-%m-%Y %H:%M UTC")'
-crontab_instance = CronTab(user="root")
+crontab_instance = CronTab(user=getuser())
 
 def create_job_directory():
     """ This directory will hold the temp python scripts to execute the scaling jobs """
@@ -57,7 +57,7 @@ def deployments_to_scale():
             annotations = deployment.metadata.get('annotations', {})
             f_deployment = str(namespace + '/' + str(deployment))
 
-            schedule_actions = parse_content(annotations.get('zalando.org/schedule-actions', None), f_deployment)
+            schedule_actions = parse_schedules(annotations.get('zalando.org/schedule-actions', '[]'), f_deployment)
 
             if schedule_actions is None or len(schedule_actions) == 0:
                 continue
@@ -87,7 +87,8 @@ def deploy_job_creator():
             print("Deployment: %s, Namespace: %s, Replicas: %s, MinReplicas: %s, MaxReplicas: %s, Schedule: %s"
                   % (deployment, namespace, replicas, minReplicas, maxReplicas, schedule))
 
-            with open("/root/schedule_scaling/templates/deployment-script.py", 'r') as script:
+            script_file = os.path.expanduser("~/schedule_scaling/templates/deployment_script.py")
+            with open(script_file) as script:
                 script = script.read()
             deployment_script = script % {
                 'namespace': namespace,
@@ -103,8 +104,7 @@ def deploy_job_creator():
             script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (deployment, i), "w")
             script_creator.write(deployment_script)
             script_creator.close()
-            cmd = ['. /root/.profile ; /usr/bin/python', script_creator.name,
-                   '2>&1 | tee -a /tmp/scale_activities.log']
+            cmd = ['/usr/bin/env python', script_creator.name, '2>&1 | tee -a /tmp/scale_activities.log']
             cmd = ' '.join(map(str, cmd))
             job = crontab_instance.new(command=cmd)
             try:
@@ -113,70 +113,6 @@ def deploy_job_creator():
             except Exception:
                 print('Deployment: %s has syntax error in the schedule' % (deployment))
                 job.delete()
-
-def parse_content(content, identifier):
-    if content == None:
-        return []
-
-    if is_valid_s3_url(content):
-        schedules = fetch_schedule_actions_s3(content)
-
-        if schedules == None:
-            return []
-
-        return parse_schedules(schedules, identifier)
-
-    if is_valid_url(content):
-        schedules = fetch_schedule_actions_from_url(content)
-
-        if schedules == None:
-            return []
-
-        return parse_schedules(schedules, identifier)
-
-    return parse_schedules(content, identifier)
-
-def is_valid_url(url):
-    return re.search('^(https?)://(\\S+)\.(\\S{2,}?)(/\\S+)?$', url, re.I) != None
-
-def is_valid_s3_url(url):
-    return parse_s3_url(url) != None
-
-def parse_s3_url(url):
-    match = re.search('^s3://(\\S+?)/(\\S+)$', url, re.I)
-
-    if match == None:
-        return None
-
-    return {
-        'Bucket': match.group(1),
-        'Key': match.group(2)
-    }
-
-def fetch_schedule_actions_s3(url):
-    source = parse_s3_url(url)
-
-    print(source)
-
-    s3 = boto3.client('s3')
-    try:
-        element = s3.get_object(**source)
-    except:
-        print('Couldn\'t read %s' % (url))
-        return '[]'
-
-    return element['Body'].read().decode('utf-8')
-
-def fetch_schedule_actions_from_url(url):
-    request = urllib.request.urlopen(url)
-    try:
-        content = request.read().decode('utf-8')
-    except:
-        content = None
-    finally:
-        request.close()
-
-    return content
 
 def parse_schedules(schedules, identifier):
     try:
