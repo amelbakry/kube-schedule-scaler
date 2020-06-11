@@ -17,7 +17,7 @@ if [ $status -ne 0 ]; then
 fi
 
 # Running the main Script at the beginning
-/usr/bin/python /root/schedule_scaling/schedule_scaling.py 
+/usr/bin/python /root/schedule_scaling/schedule_scaling.py
 
 # Creating the main cron
 
@@ -27,7 +27,7 @@ echo "
 " | /usr/bin/crontab -
 
 # Run once at the startup of container
-/usr/bin/python /root/run_missed_jobs.py  >> /tmp/scale_activities.log
+/usr/bin/python /root/schedule_scaling/scripts/run_missed_jobs.py  >> /tmp/scale_activities.log
 
 # Getting the Scaling Activities
 touch /tmp/scalingjob.log

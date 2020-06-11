@@ -23,11 +23,7 @@ RUN sudo apt-get update \
     && sudo apt-get install -y kubectl cron
 
 ADD schedule_scaling /root/schedule_scaling
-COPY ./run_missed_jobs.py /root
-RUN chmod a+x /root/run_missed_jobs.py
 
-COPY ./startup.sh /root
-RUN chmod a+x /root/startup.sh
-CMD /root/startup.sh
+CMD /root/schedule_scaling/scripts/startup.sh
 
 ENV PYTHONPATH "${PYTHONPATH}:/root/schedule_scaling"
