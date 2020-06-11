@@ -63,8 +63,6 @@ Stack pegasus-node-live has been scaled successfully to 120 minReplicas at 15-03
 Stack pegasus-node-live has been scaled successfully to 80 minReplicas at 15-03-2019 07:00 UTC
 ```
 
-![Pods](image/pods.png)
-
 Check for specific deployment at specific time
 ```bash
 kubectl logs kube-schedule-scaler-87f9649f5-btnt7 | grep nginx-deployment-2 | grep "28-12-2018 09:50"
