@@ -8,6 +8,7 @@ import pykube
 import re
 import urllib.request
 import boto3
+import resources
 from crontab import CronTab
 
 EXECUTION_TIME = 'datetime.datetime.now().strftime("%d-%m-%Y %H:%M UTC")'
@@ -19,7 +20,6 @@ def create_job_directory():
     if os.path.isdir(temp__dir):
         shutil.rmtree(temp__dir)
     pathlib.Path(temp__dir).mkdir(parents=True, exist_ok=True)
-
 
 def clear_cron():
     """ This is needed so that if any one removes his scaling action
@@ -53,7 +53,7 @@ def deployments_to_scale():
     scaling_dict = {}
     for namespace in list(pykube.Namespace.objects(api)):
         namespace = str(namespace)
-        for deployment in pykube.Deployment.objects(api).filter(namespace=namespace):
+        for deployment in resources.Deployment.objects(api).filter(namespace=namespace):
             annotations = deployment.metadata.get('annotations', {})
             f_deployment = str(namespace + '/' + str(deployment))
 
