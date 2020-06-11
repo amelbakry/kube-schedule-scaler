@@ -4,7 +4,7 @@ MAINTAINER "eng.ahmed.elbakry@gmail.com"
 # Install python tools and dev packages
 RUN apt-get update \
     && apt-get install -q -y --no-install-recommends  python3-pip python3-setuptools python3-wheel gcc \
-    && apt-get clean \ 
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # set python 3 as the default python version
@@ -25,10 +25,9 @@ RUN sudo apt-get update \
 ADD schedule_scaling /root/schedule_scaling
 COPY ./run_missed_jobs.py /root
 RUN chmod a+x /root/run_missed_jobs.py
-# allow us to override pykube resources
-COPY ./resources.py /root/schedule_scaling
-ENV PYTHONPATH "${PYTHONPATH}:/root/schedule_scaling"
 
 COPY ./startup.sh /root
 RUN chmod a+x /root/startup.sh
 CMD /root/startup.sh
+
+ENV PYTHONPATH "${PYTHONPATH}:/root/schedule_scaling"
