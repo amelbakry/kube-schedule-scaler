@@ -138,7 +138,7 @@ def deployment_job_creator():
 
     deployments__for_scale = deployments_for_scale()
     print("Deployments collected for scaling: ")
-    for deployment_namespace, schedules in deployments__for_scale.items():
+    for namespace_deployment, schedules in deployments__for_scale.items():
         namespace = namespace_deployment.split("/")[0]
         deployment = namespace_deployment.split("/")[1]
         for n in range(len(schedules)):
