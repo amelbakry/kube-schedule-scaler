@@ -11,7 +11,7 @@ print("Running the Jobs of the last 5 minutes")
 
 for job in scale_jobs:
 
-    # print(job)
+    print(job)
 
     schedule = job.schedule(date_from=datetime.now())
     schedule = str(schedule.get_prev())
