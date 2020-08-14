@@ -68,7 +68,7 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
       - name: kube-schedule-scaler
-        image: cwsakamoto/kube-schedule-scaler:6257d97
+        image: cwsakamoto/kube-schedule-scaler:latest
         imagePullPolicy: Always
         resources:
           limits:
