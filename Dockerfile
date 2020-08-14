@@ -1,4 +1,4 @@
-From ubuntu:18.04
+FROM ubuntu:18.04
 MAINTAINER "sakamoto@chatwork.com"
 
 # Install python tools and dev packages
