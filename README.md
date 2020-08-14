@@ -11,12 +11,20 @@ At the moment it supports reading the scaling definitions from directly in the a
 
 ## Usage
 
+### deployment
 
-Just add the annotation to either your `Deployment`.
+Add the annotation to either your `Deployment`.
 
 ```
   annotations:
     zalando.org/schedule-actions: '[{"schedule": "10 18 * * *", "replicas": "3"}]'
+```
+
+### HPA
+
+```
+  annotations:
+    zalando.org/schedule-actions: '[{"schedule": "10 18 * * *", "minReplicas": "3"}]'
 ```
 
 ## Available Fields 
@@ -38,11 +46,60 @@ metadata:
   annotations:
     zalando.org/schedule-actions: |
       [
-        {"schedule": "30 4 * * 1,2,3,4,5", "minReplicas": "{{{HIGH_LOAD_REPLICAS}}}"},
-        {"schedule": "00 8 * * 1,2,3,4,5", "minReplicas": "{{{REPLICAS}}}"},
-        {"schedule": "00 21 * * 1,2,3,4,5", "minReplicas": "{{{MIN_REPLICAS}}}"},
-        {"schedule": "30 5 * * 6,7", "minReplicas": "{{{HIGH_LOAD_REPLICAS}}}"},
-        {"schedule": "00 9 * * 6,7", "minReplicas": "{{{REPLICAS}}}"},
-        {"schedule": "00 21 * * 6,7", "minReplicas": "{{{MIN_REPLICAS}}}"}
+        {"schedule": "30 4 * * 1,2,3,4,5", "replicas": "{{{HIGH_LOAD_REPLICAS}}}"},
+        {"schedule": "00 8 * * 1,2,3,4,5", "replicas": "{{{REPLICAS}}}"}
       ]
 ```
+
+### HPA Example
+
+```bash
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  annotations:
+    zalando.org/schedule-actions: |
+      [
+        {"schedule": "15 4 * * *", "minReplicas": "1"},
+        {"schedule": "12 4 * * *", "maxReplicas": "20"},
+        {"schedule": "10 4 * * *", "maxReplicas": "15", "minReplicas": "2"}
+      ]
+  name: php-apache
+spec:
+  maxReplicas: 20
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  targetCPUUtilizationPercentage: 50
+```
+
+autoscaling/v2beta2
+
+```bash
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+  annotations:
+    zalando.org/schedule-actions: |
+      [
+        {"schedule": "20 7 * * *", "maxReplicas": "15", "minReplicas": "2"}
+      ]
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 1
+  maxReplicas: 7
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+```
+  
