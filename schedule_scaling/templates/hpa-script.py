@@ -26,39 +26,39 @@ if hpa:
         hpa.update()
 
         if hpa.obj["spec"]["maxReplicas"] == maxReplicas and hpa.obj["spec"]["minReplicas"] == minReplicas:
-            print('HPA %(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
-            print('HPA %(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
+            print("[INFO] ", datetime.datetime.now(), ' HPA %(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
+            print("[INFO] ", datetime.datetime.now(), ' HPA %(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
         else:
-            print('ERROR: Something went wrong... HPA %(name)s has not been scaled')
+            print("[ERROR] ", datetime.datetime.now(), ' Something went wrong... HPA %(name)s has not been scaled')
 
     elif minReplicas != None:
         currentMaxReplicas = hpa.obj["spec"].get('maxReplicas', {})
 
         if currentMaxReplicas:
             if currentMaxReplicas < minReplicas:
-                print('ERROR: You cannot set minReplicas(desired:{}) larger than maxReplicas(current:{}).'.format(minReplicas, currentMaxReplicas))
+                print("[ERROR] ", datetime.datetime.now(), ' You cannot set minReplicas(desired:{}) larger than maxReplicas(current:{}).'.format(minReplicas, currentMaxReplicas))
                 sys.exit(1)
 
         hpa.obj["spec"]["minReplicas"] = minReplicas
         hpa.update()
 
         if hpa.obj["spec"]["minReplicas"] == minReplicas:
-            print('HPA %(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
+            print("[INFO] ", datetime.datetime.now(), ' HPA %(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
         else:
-            print('ERROR: Something went wrong... HPA %(name)s has not been scaled')
+            print("[INFO] ", datetime.datetime.now(), ' Something went wrong... HPA %(name)s has not been scaled')
 
     elif maxReplicas != None:
         currentMinReplicas = hpa.obj["spec"].get('minReplicas', {})
 
         if currentMinReplicas:
             if currentMinReplicas > maxReplicas:
-                print('ERROR: You cannot set manReplicas(desired:{}) larger than maxReplicas(current:{}).'.format(maxReplicas, currentMinReplicas))
+                print("[ERROR] ", datetime.datetime.now(), ' You cannot set maxReplicas(desired:{}) larger than maxReplicas(current:{}).'.format(maxReplicas, currentMinReplicas))
                 sys.exit(1)
 
         hpa.obj["spec"]["maxReplicas"] = maxReplicas
         hpa.update()
 
         if hpa.obj["spec"]["maxReplicas"] == maxReplicas:
-            print('HPA %(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
+            print("[INFO] ", datetime.datetime.now(), ' HPA %(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
         else:
-            print('ERROR: Something went wrong... HPA %(name)s has not been scaled')
+            print("[INFO] ", datetime.datetime.now(), ' Something went wrong... HPA %(name)s has not been scaled')

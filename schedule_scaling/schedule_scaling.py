@@ -8,6 +8,7 @@ import pykube
 import re
 import urllib.request
 from crontab import CronTab
+import datetime
 
 EXECUTION_TIME = 'datetime.datetime.now().strftime("%d-%m-%Y %H:%M UTC")'
 
@@ -68,7 +69,7 @@ def hpa_job_creator():
     """ Create CronJobs for configured hpa """
 
     hpa__for_scale = hpa_for_scale()
-    print("HPA collected for scaling: ")
+    print("[INFO] ", datetime.datetime.now(), " HPA collected for scaling: ")
     for namespace_hpa, schedules in hpa__for_scale.items():
         namespace = namespace_hpa.split("/")[0]
         hpa = namespace_hpa.split("/")[1]
@@ -77,8 +78,7 @@ def hpa_job_creator():
             minReplicas = schedules_n.get('minReplicas', None)
             maxReplicas = schedules_n.get('maxReplicas', None)
             schedule = schedules_n.get('schedule', None)
-            print("HPA: %s, Namespace: %s, MinReplicas: %s, MaxReplicas: %s, Schedule: %s"
-                  % (hpa, namespace, minReplicas, maxReplicas, schedule))
+            print("[INFO] ", datetime.datetime.now(), " HPA: {}, Namespace: {}, MinReplicas: {}, MaxReplicas: {}, Schedule: {}".format(hpa, namespace, minReplicas, maxReplicas, schedule))
 
             with open("/root/schedule_scaling/templates/hpa-script.py", 'r') as script:
                 script = script.read()
@@ -105,7 +105,7 @@ def hpa_job_creator():
                 job.set_comment("Scheduling_Jobs")
                 scaling_cron.write()
             except Exception:
-                print('HPA: %s has syntax error in the schedule' % (hpa))
+                print("[ERROR] ", datetime.datetime.now(),' HPA: {} has syntax error in the schedule'.format(hpa))
                 pass
 
 def hpa_for_scale():
@@ -137,7 +137,7 @@ def deployment_job_creator():
     """ Create CronJobs for configured Deployments """
 
     deployments__for_scale = deployments_for_scale()
-    print("Deployments collected for scaling: ")
+    print("[INFO] ",datetime.datetime.now(), " Deployments collected for scaling: ")
     for namespace_deployment, schedules in deployments__for_scale.items():
         namespace = namespace_deployment.split("/")[0]
         deployment = namespace_deployment.split("/")[1]
@@ -145,8 +145,7 @@ def deployment_job_creator():
             schedules_n = schedules[n]
             replicas = schedules_n.get('replicas', None)
             schedule = schedules_n.get('schedule', None)
-            print("Deployment: %s, Namespace: %s, Replicas: %s, Schedule: %s"
-                  % (deployment, namespace, replicas, schedule))
+            print("[INFO] ", datetime.datetime.now(), " Deployment: {}, Namespace: {}, Replicas: {}, Schedule: {}".format(deployment, namespace, replicas, schedule))
 
             with open("/root/schedule_scaling/templates/deployment-script.py", 'r') as script:
                 script = script.read()
@@ -172,7 +171,7 @@ def deployment_job_creator():
                 job.set_comment("Scheduling_Jobs")
                 scaling_cron.write()
             except Exception:
-                print('Deployment: %s has syntax error in the schedule' % (deployment))
+                print("[ERROR] ", datetime.datetime.now(), '  Deployment: {} has syntax error in the schedule'.format(deployment))
                 pass
 
 def parse_content(content, identifier):
@@ -207,7 +206,7 @@ def parse_schedules(schedules, identifier):
     try:
         return json.loads(schedules)
     except Exception as err:
-        print('%s - Error in parsing JSON %s with error' % (identifier, schedules), err)
+        print("[ERROR] ", datetime.datetime.now(), ' {} - Error in parsing JSON {} with error'.format(identifier, schedules), err)
         return []
 
 if __name__ == '__main__':

@@ -23,6 +23,6 @@ if replicas != None:
     deployment.update()
 
     if deployment.replicas == replicas:
-        print('Deployment %(name)s has been scaled successfully to %(replicas)s replica at', %(time)s)
+        print("[INFO] ", datetime.datetime.now(), ' Deployment %(name)s has been scaled successfully to %(replicas)s replica at', %(time)s)
     else:
-        print('Something went wrong... deployment %(name)s has not been scaled')
+        print("[ERROR] ", datetime.datetime.now(), ' Something went wrong... deployment %(name)s has not been scaled')
