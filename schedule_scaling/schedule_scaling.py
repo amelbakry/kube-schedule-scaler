@@ -69,7 +69,7 @@ def hpa_job_creator():
     """ Create CronJobs for configured hpa """
 
     hpa__for_scale = hpa_for_scale()
-    print("[INFO] ", datetime.datetime.now(), " HPA collected for scaling: ")
+    print("[INFO]", datetime.datetime.now(), "HPA collected for scaling: ")
     for namespace_hpa, schedules in hpa__for_scale.items():
         namespace = namespace_hpa.split("/")[0]
         hpa = namespace_hpa.split("/")[1]
@@ -78,7 +78,7 @@ def hpa_job_creator():
             minReplicas = schedules_n.get('minReplicas', None)
             maxReplicas = schedules_n.get('maxReplicas', None)
             schedule = schedules_n.get('schedule', None)
-            print("[INFO] ", datetime.datetime.now(), " HPA: {}, Namespace: {}, MinReplicas: {}, MaxReplicas: {}, Schedule: {}".format(hpa, namespace, minReplicas, maxReplicas, schedule))
+            print("[INFO]", datetime.datetime.now(), "HPA: {}, Namespace: {}, MinReplicas: {}, MaxReplicas: {}, Schedule: {}".format(hpa, namespace, minReplicas, maxReplicas, schedule))
 
             with open("/root/schedule_scaling/templates/hpa-script.py", 'r') as script:
                 script = script.read()
@@ -96,7 +96,7 @@ def hpa_job_creator():
             script_creator.write(hpa_script)
             script_creator.close()
             cmd = ['sleep 20 ; . /root/.profile ; /usr/bin/python', script_creator.name,
-                   '2>&1 | tee -a', os.environ['SCALING_ACTIVITIES_LOG']]
+                   '2>&1 | tee -a', os.environ['SCALING_LOG_FILE']]
             cmd = ' '.join(map(str, cmd))
             scaling_cron = CronTab(user='root')
             job = scaling_cron.new(command=cmd)
@@ -105,7 +105,7 @@ def hpa_job_creator():
                 job.set_comment("Scheduling_Jobs")
                 scaling_cron.write()
             except Exception:
-                print("[ERROR] ", datetime.datetime.now(),' HPA: {} has syntax error in the schedule'.format(hpa))
+                print("[ERROR]", datetime.datetime.now(),'HPA: {} has syntax error in the schedule'.format(hpa))
                 pass
 
 def hpa_for_scale():
@@ -137,7 +137,7 @@ def deployment_job_creator():
     """ Create CronJobs for configured Deployments """
 
     deployments__for_scale = deployments_for_scale()
-    print("[INFO] ",datetime.datetime.now(), " Deployments collected for scaling: ")
+    print("[INFO]",datetime.datetime.now(), "Deployments collected for scaling: ")
     for namespace_deployment, schedules in deployments__for_scale.items():
         namespace = namespace_deployment.split("/")[0]
         deployment = namespace_deployment.split("/")[1]
@@ -145,7 +145,7 @@ def deployment_job_creator():
             schedules_n = schedules[n]
             replicas = schedules_n.get('replicas', None)
             schedule = schedules_n.get('schedule', None)
-            print("[INFO] ", datetime.datetime.now(), " Deployment: {}, Namespace: {}, Replicas: {}, Schedule: {}".format(deployment, namespace, replicas, schedule))
+            print("[INFO]", datetime.datetime.now(), "Deployment: {}, Namespace: {}, Replicas: {}, Schedule: {}".format(deployment, namespace, replicas, schedule))
 
             with open("/root/schedule_scaling/templates/deployment-script.py", 'r') as script:
                 script = script.read()
@@ -162,7 +162,7 @@ def deployment_job_creator():
             script_creator.write(deployment_script)
             script_creator.close()
             cmd = ['sleep 20 ; . /root/.profile ; /usr/bin/python', script_creator.name,
-                   '2>&1 | tee -a', os.environ['SCALING_ACTIVITIES_LOG']]
+                   '2>&1 | tee -a', os.environ['SCALING_LOG_FILE']]
             cmd = ' '.join(map(str, cmd))
             scaling_cron = CronTab(user='root')
             job = scaling_cron.new(command=cmd)
@@ -171,7 +171,7 @@ def deployment_job_creator():
                 job.set_comment("Scheduling_Jobs")
                 scaling_cron.write()
             except Exception:
-                print("[ERROR] ", datetime.datetime.now(), '  Deployment: {} has syntax error in the schedule'.format(deployment))
+                print("[ERROR]", datetime.datetime.now(), 'Deployment: {} has syntax error in the schedule'.format(deployment))
                 pass
 
 def parse_content(content, identifier):
@@ -206,7 +206,7 @@ def parse_schedules(schedules, identifier):
     try:
         return json.loads(schedules)
     except Exception as err:
-        print("[ERROR] ", datetime.datetime.now(), ' {} - Error in parsing JSON {} with error'.format(identifier, schedules), err)
+        print("[ERROR]", datetime.datetime.now(), '{} - Error in parsing JSON {} with error'.format(identifier, schedules), err)
         return []
 
 if __name__ == '__main__':

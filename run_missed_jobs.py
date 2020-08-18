@@ -7,7 +7,7 @@ from datetime import timedelta
 cron = CronTab(user='root')
 scale_jobs = cron.find_comment('Scheduling_Jobs')
 
-print("Running the Jobs of the last 5 minutes")
+print("[INFO]", datetime.now(), "Running the Jobs of the last 5 minutes")
 
 for job in scale_jobs:
 
