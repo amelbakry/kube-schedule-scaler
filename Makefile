@@ -1,4 +1,4 @@
-REPOSITORY := cwsakamoto
+REPOSITORY := chatwork
 
 .PHONY: build
 build:
