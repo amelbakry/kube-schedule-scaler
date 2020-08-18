@@ -29,7 +29,7 @@ if hpa:
             print('HPA %(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
             print('HPA %(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
         else:
-            print('Something went wrong... HPA %(name)s has not been scaled')
+            print('ERROR: Something went wrong... HPA %(name)s has not been scaled')
 
     elif minReplicas != None:
         currentMaxReplicas = hpa.obj["spec"].get('maxReplicas', {})
@@ -45,14 +45,14 @@ if hpa:
         if hpa.obj["spec"]["minReplicas"] == minReplicas:
             print('HPA %(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
         else:
-            print('Something went wrong... HPA %(name)s has not been scaled')
+            print('ERROR: Something went wrong... HPA %(name)s has not been scaled')
 
     elif maxReplicas != None:
         currentMinReplicas = hpa.obj["spec"].get('minReplicas', {})
 
         if currentMinReplicas:
             if currentMinReplicas > maxReplicas:
-                print('ERROR: You cannot set manReplicas(desired:{}) larger than mixReplicas(current:{}).'.format(minReplicas, currentMinReplicas))
+                print('ERROR: You cannot set manReplicas(desired:{}) larger than maxReplicas(current:{}).'.format(maxReplicas, currentMinReplicas))
                 sys.exit(1)
 
         hpa.obj["spec"]["maxReplicas"] = maxReplicas
@@ -61,4 +61,4 @@ if hpa:
         if hpa.obj["spec"]["maxReplicas"] == maxReplicas:
             print('HPA %(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
         else:
-            print('Something went wrong... HPA %(name)s has not been scaled')
+            print('ERROR: Something went wrong... HPA %(name)s has not been scaled')
