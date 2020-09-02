@@ -23,13 +23,18 @@ if hpa:
     if maxReplicas != None and minReplicas != None:
         hpa.obj["spec"]["maxReplicas"] = maxReplicas
         hpa.obj["spec"]["minReplicas"] = minReplicas
-        hpa.update()
 
+        try:
+          hpa.update()
+        except Exception as err:
+          print("[ERROR]", datetime.datetime.now(),'hpa %(name)s has not been updated',err)
+
+        hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
         if hpa.obj["spec"]["maxReplicas"] == maxReplicas and hpa.obj["spec"]["minReplicas"] == minReplicas:
             print("[INFO]", datetime.datetime.now(), 'HPA %(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
             print("[INFO]", datetime.datetime.now(), 'HPA %(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
         else:
-            print("[ERROR] ", datetime.datetime.now(), ' Something went wrong... HPA %(name)s has not been scaled')
+            print("[ERROR]", datetime.datetime.now(), ' Something went wrong... HPA %(name)s has not been scaled')
 
     elif minReplicas != None:
         currentMaxReplicas = hpa.obj["spec"].get('maxReplicas', {})
@@ -40,8 +45,13 @@ if hpa:
                 sys.exit(1)
 
         hpa.obj["spec"]["minReplicas"] = minReplicas
-        hpa.update()
 
+        try:
+          hpa.update()
+        except Exception as err:
+          print("[ERROR]", datetime.datetime.now(),'hpa %(name)s has not been updated',err)
+
+        hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
         if hpa.obj["spec"]["minReplicas"] == minReplicas:
             print("[INFO]", datetime.datetime.now(), 'HPA %(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
         else:
@@ -56,8 +66,13 @@ if hpa:
                 sys.exit(1)
 
         hpa.obj["spec"]["maxReplicas"] = maxReplicas
-        hpa.update()
 
+        try:
+          hpa.update()
+        except Exception as err:
+          print("[ERROR]", datetime.datetime.now(),'hpa %(name)s has not been updated',err)
+
+        hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
         if hpa.obj["spec"]["maxReplicas"] == maxReplicas:
             print("[INFO]", datetime.datetime.now(), 'HPA %(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
         else:
