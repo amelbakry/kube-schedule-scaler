@@ -23,10 +23,10 @@ if replicas != None:
     try:
       deployment.update()
     except Exception as err:
-      print("[ERROR]", datetime.datetime.now(),'deployment %(name)s has not been updated',err)
+      print("[ERROR]", datetime.datetime.now(),'deployment %(namespace)s/%(name)s has not been updated',err)
 
     deployment = pykube.Deployment.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
     if deployment.replicas == replicas:
-        print("[INFO]", datetime.datetime.now(), 'Deployment %(name)s has been scaled successfully to %(replicas)s replica at', %(time)s)
+        print("[INFO]", datetime.datetime.now(), 'Deployment %(namespace)s/%(name)s has been scaled successfully to %(replicas)s replica at', %(time)s)
     else:
-        print("[ERROR]", datetime.datetime.now(), 'Something went wrong... deployment %(name)s has not been scaled')
+        print("[ERROR]", datetime.datetime.now(), 'Something went wrong... deployment %(namespace)s/%(name)s has not been scaled to %(replicas)s')
