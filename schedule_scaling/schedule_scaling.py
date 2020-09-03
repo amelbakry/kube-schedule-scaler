@@ -95,7 +95,7 @@ def hpa_job_creator():
             script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (hpa, i), "w")
             script_creator.write(hpa_script)
             script_creator.close()
-            cmd = ['sleep 20 ; . /root/.profile ; /usr/bin/python', script_creator.name,
+            cmd = ['sleep 1 ; . /root/.profile ; /usr/bin/python', script_creator.name,
                    '2>&1 | tee -a', os.environ['SCALING_LOG_FILE']]
             cmd = ' '.join(map(str, cmd))
             scaling_cron = CronTab(user='root')
@@ -161,7 +161,7 @@ def deployment_job_creator():
             script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (deployment, i), "w")
             script_creator.write(deployment_script)
             script_creator.close()
-            cmd = ['sleep 20 ; . /root/.profile ; /usr/bin/python', script_creator.name,
+            cmd = ['sleep 1 ; . /root/.profile ; /usr/bin/python', script_creator.name,
                    '2>&1 | tee -a', os.environ['SCALING_LOG_FILE']]
             cmd = ' '.join(map(str, cmd))
             scaling_cron = CronTab(user='root')

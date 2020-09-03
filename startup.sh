@@ -41,7 +41,7 @@ fi
 
 echo "
 ## The main script to collect the deployments to be scaled ##
-*/3 * * * * sleep 3; . /root/.profile; /usr/bin/python /root/schedule_scaling/schedule_scaling.py >> ${SCALING_LOG_FILE} 2>&1
+*/3 * * * * sleep 7; . /root/.profile; /usr/bin/python /root/schedule_scaling/schedule_scaling.py >> ${SCALING_LOG_FILE} 2>&1
 " | /usr/bin/crontab -
 
 # Run once at the startup of container
