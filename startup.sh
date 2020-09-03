@@ -34,22 +34,23 @@ if [ $status -ne 0 ]; then
   exit $status
 fi
 
-# Running the main Script at the beginning
-echo "[INFO] $datetime Running the main script at the beginning"
-/usr/bin/python /root/schedule_scaling/schedule_scaling.py >> ${SCALING_LOG_FILE} 2>&1
-
-# Run once at the startup of container
-echo "[INFO] $datetime Run once at the startup of container"
-sleep 5
-/usr/bin/python /root/run_missed_jobs.py >> ${SCALING_LOG_FILE}
-
 # Creating the main cron
-
+datetime=`date "+%Y-%m-%d %H:%M:%S.%6N"`
 echo "[INFO] $datetime Creating the main cron"
 echo "
 ## The main script to collect the deployments to be scaled ##
 */3 * * * * sleep 7; . /root/.profile; /usr/bin/python /root/schedule_scaling/schedule_scaling.py >> ${SCALING_LOG_FILE} 2>&1
 " | /usr/bin/crontab -
+
+# Running the main Script at the beginning
+datetime=`date "+%Y-%m-%d %H:%M:%S.%6N"`
+echo "[INFO] $datetime Running the main script at the beginning"
+/usr/bin/python /root/schedule_scaling/schedule_scaling.py >> ${SCALING_LOG_FILE} 2>&1
+
+# Run once at the startup of container
+datetime=`date "+%Y-%m-%d %H:%M:%S.%6N"`
+echo "[INFO] $datetime Run once at the startup of container"
+/usr/bin/python /root/run_missed_jobs.py >> ${SCALING_LOG_FILE}
 
 trap 'jobs -p | xargs kill; sleep 10; echo === Finish this script ===; exit 0' SIGTERM
 
