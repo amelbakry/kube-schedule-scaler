@@ -4,15 +4,12 @@ from crontab import CronTab
 from datetime import datetime
 from datetime import timedelta
 
-cron = CronTab(user='root')
-scale_jobs = cron.find_comment('Scheduling_Jobs')
+scaling_cron = CronTab(user='root')
+scale_jobs = scaling_cron.find_comment('Scheduling_Jobs')
 
 print("[INFO]", datetime.now(), "Running the Jobs of the last 5 minutes")
 
 for job in scale_jobs:
-
-    print(job)
-
     schedule = job.schedule(date_from=datetime.now())
     schedule = str(schedule.get_prev())
     schedule = time.strptime(schedule, "%Y-%m-%d %H:%M:%S")
