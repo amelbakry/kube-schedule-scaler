@@ -3,7 +3,6 @@ import operator
 import time
 import datetime
 from random import randint
-from time import sleep
 
 def get_kube_api():
     try:
@@ -14,7 +13,7 @@ def get_kube_api():
     api = pykube.HTTPClient(config)
     return api
 
-sleep(randint(1,5))
+time.sleep(randint(1,5))
 api = get_kube_api()
 deployment = pykube.Deployment.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
 
