@@ -3,7 +3,7 @@ import operator
 import time
 import datetime
 import sys
-from random import randint
+import random
 
 def get_kube_api():
     try:
@@ -14,7 +14,7 @@ def get_kube_api():
     api = pykube.HTTPClient(config)
     return api
 
-time.sleep(randint(1,5))
+time.sleep(random.uniform(1, 10))
 api = get_kube_api()
 hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
 
