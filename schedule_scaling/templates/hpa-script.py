@@ -1,81 +1,81 @@
-import pykube
-import operator
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 import time
 import datetime
 import sys
 import random
-
-def get_kube_api():
-    try:
-        config = pykube.KubeConfig.from_service_account()
-    except FileNotFoundError:
-        # local testing
-        config = pykube.KubeConfig.from_file(os.path.expanduser('~/.kube/config'))
-    api = pykube.HTTPClient(config)
-    return api
+import os
 
 time.sleep(random.uniform(1, 10))
-api = get_kube_api()
-hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
 
-maxReplicas = %(maxReplicas)s
-minReplicas = %(minReplicas)s
+if os.getenv('KUBERNETES_SERVICE_HOST'):
+    # ServiceAccountの権限で実行する
+    config.load_incluster_config()
+else:
+    # $HOME/.kube/config から読み込む
+    config.load_kube_config()
 
-if hpa:
-    if maxReplicas != None and minReplicas != None:
-        hpa.obj["spec"]["maxReplicas"] = maxReplicas
-        hpa.obj["spec"]["minReplicas"] = minReplicas
+v1 = client.AutoscalingV1Api()
 
-        try:
-          hpa.update()
-        except Exception as err:
-          print("[ERROR]", datetime.datetime.now(),'HPA %(namespace)s/%(name)s has not been updated',err)
+maxReplicas = %(maxReplicas)d
+minReplicas = %(minReplicas)d
 
-        hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
-        if hpa.obj["spec"]["maxReplicas"] == maxReplicas and hpa.obj["spec"]["minReplicas"] == minReplicas:
-            print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
-            print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
-        else:
-            print("[ERROR]", datetime.datetime.now(), ' Something went wrong... HPA %(namespace)s/%(name)s has not been scaled(maxReplicas to %(maxReplicas)s, minReplicas to %(minReplicas)s)')
+def patch_hpa(body):
+    try:
+        v1.patch_namespaced_horizontal_pod_autoscaler("%(name)s", "%(namespace)s", body)
+        #api_response = v1.patch_namespaced_horizontal_pod_autoscaler("%(name)s", "%(namespace)s", body)
+        #print(api_response)
+    except ApiException as err:
+        print("[ERROR]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has not been updated', err)
 
-    elif minReplicas != None:
-        currentMaxReplicas = hpa.obj["spec"].get('maxReplicas', {})
+if maxReplicas > 0 and minReplicas > 0:
+    body = {"spec": {"minReplicas": minReplicas, "maxReplicas": maxReplicas}}
 
-        if currentMaxReplicas:
-            if currentMaxReplicas < minReplicas:
-                print("[ERROR]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s cannot be set minReplicas(desired:{}) larger than maxReplicas(current:{}).'.format(minReplicas, currentMaxReplicas))
-                sys.exit(1)
+    patch_hpa(body)
+    hpa = v1.read_namespaced_horizontal_pod_autoscaler("%(name)s","%(namespace)s")
+    if hpa.spec.max_replicas == maxReplicas and hpa.spec.min_replicas == minReplicas:
+        print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
+        print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
+    else:
+        print("[ERROR]", datetime.datetime.now(), ' Something went wrong... HPA %(namespace)s/%(name)s has not been scaled(maxReplicas to %(maxReplicas)s, minReplicas to %(minReplicas)s)')
 
-        hpa.obj["spec"]["minReplicas"] = minReplicas
+elif minReplicas > 0:
+    current_hpa = v1.read_namespaced_horizontal_pod_autoscaler("%(name)s", "%(namespace)s")
+    currentMaxReplicas = current_hpa.spec.max_replicas
 
-        try:
-          hpa.update()
-        except Exception as err:
-          print("[ERROR]", datetime.datetime.now(),'HPA %(namespace)s/%(name)s has not been updated',err)
+    if currentMaxReplicas:
+        if currentMaxReplicas < minReplicas:
+            print("[ERROR]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s cannot be set minReplicas(desired:{}) larger than maxReplicas(current:{}).'.format(minReplicas, currentMaxReplicas))
+            sys.exit(1)
 
-        hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
-        if hpa.obj["spec"]["minReplicas"] == minReplicas:
-            print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
-        else:
-            print("[ERROR]", datetime.datetime.now(), 'Something went wrong... HPA %(namespace)s/%(name)s has not been scaled(minReplicas to %(minReplicas)s)')
+    body = {"spec": {"minReplicas": minReplicas}}
 
-    elif maxReplicas != None:
-        currentMinReplicas = hpa.obj["spec"].get('minReplicas', {})
+    patch_hpa(body)
 
-        if currentMinReplicas:
-            if currentMinReplicas > maxReplicas:
-                print("[ERROR]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s cannot be set maxReplicas(desired:{}) larger than minReplicas(current:{}).'.format(maxReplicas, currentMinReplicas))
-                sys.exit(1)
+    hpa = v1.read_namespaced_horizontal_pod_autoscaler("%(name)s", "%(namespace)s")
+    if hpa.spec.min_replicas == minReplicas:
+        print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to minReplicas to %(minReplicas)s at', %(time)s)
+    else:
+        print("[ERROR]", datetime.datetime.now(), 'Something went wrong... HPA %(namespace)s/%(name)s has not been scaled(minReplicas to %(minReplicas)s)')
 
-        hpa.obj["spec"]["maxReplicas"] = maxReplicas
+elif maxReplicas > 0:
+    current_hpa = v1.read_namespaced_horizontal_pod_autoscaler("%(name)s", "%(namespace)s")
+    currentMinReplicas = current_hpa.spec.min_replicas
 
-        try:
-          hpa.update()
-        except Exception as err:
-          print("[ERROR]", datetime.datetime.now(),'HPA %(namespace)s/%(name)s has not been updated',err)
+    if currentMinReplicas:
+        if currentMinReplicas > maxReplicas:
+            print("[ERROR]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s cannot be set maxReplicas(desired:{}) larger than minReplicas(current:{}).'.format(maxReplicas, currentMinReplicas))
+            sys.exit(1)
 
-        hpa = pykube.HorizontalPodAutoscaler.objects(api).filter(namespace="%(namespace)s").get(name="%(name)s")
-        if hpa.obj["spec"]["maxReplicas"] == maxReplicas:
-            print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
-        else:
-            print("[ERROR]", datetime.datetime.now(), 'Something went wrong... HPA %(namespace)s/%(name)s has not been scaled(maxReplicas to %(maxReplicas)s)')
+    body = {"spec": {"maxReplicas": maxReplicas}}
+    patch_hpa(body)
+
+    hpa = v1.read_namespaced_horizontal_pod_autoscaler("%(name)s", "%(namespace)s")
+    if hpa.spec.max_replicas == maxReplicas:
+        print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
+    else:
+        print("[ERROR]", datetime.datetime.now(), 'Something went wrong... HPA %(namespace)s/%(name)s has not been scaled(maxReplicas to %(maxReplicas)s)')
+
+elif maxReplicas == 0 or minReplicas == 0:
+    print("[ERROR]", datetime.datetime.now(),
+          'Neither maxReplicas nor minReplicas can be set to 0. HPA %(namespace)s/%(name)s has not been scaled')

@@ -4,14 +4,14 @@ import pathlib
 import json
 import logging
 import shutil
-import pykube
+from kubernetes import client, config
 import re
 import urllib.request
 from crontab import CronTab
 import datetime
 
 EXECUTION_TIME = 'datetime.datetime.now().strftime("%d-%m-%Y %H:%M UTC")'
-
+schedule_actions_annotation = 'zalando.org/schedule-actions'
 
 def create_job_directory():
     """ This directory will hold the temp python scripts to execute the scaling jobs """
@@ -28,107 +28,42 @@ def clear_cron():
     my_cron.remove_all(comment="Scheduling_Jobs")
     my_cron.write()
 
-
-def get_kube_api():
-    """ Initiating the API from Service Account or when running locally from ~/.kube/config """
-    try:
-        config = pykube.KubeConfig.from_service_account()
-    except FileNotFoundError:
-        # local testing
-        config = pykube.KubeConfig.from_file(os.path.expanduser('~/.kube/config'))
-    api = pykube.HTTPClient(config)
-    return api
-
-
 def deployments_for_scale():
     '''
     Getting the deployments configured for schedule scaling...
     '''
-    api = get_kube_api()
-    deployments = []
+    v1 = client.AppsV1Api()
     scaling_dict = {}
-    for namespace in list(pykube.Namespace.objects(api)):
-        namespace = str(namespace)
-        for deployment in pykube.Deployment.objects(api).filter(namespace=namespace):
-            annotations = deployment.metadata.get('annotations', {})
-            f_deployment = str(namespace + '/' + str(deployment))
+    deployments = v1.list_deployment_for_all_namespaces(watch=False)
 
-            schedule_actions = parse_content(annotations.get('zalando.org/schedule-actions', None), f_deployment)
+    for i in deployments.items:
+        if schedule_actions_annotation in i.metadata.annotations:
+            deployment = str(i.metadata.namespace + '/' + str(i.metadata.name))
+            schedule_actions = parse_content(i.metadata.annotations[schedule_actions_annotation], deployment)
+            scaling_dict[deployment] = schedule_actions
 
-            if schedule_actions is None or len(schedule_actions) == 0:
-                continue
-
-            deployments.append([deployment.metadata['name']])
-            scaling_dict[f_deployment] = schedule_actions
-    if not deployments:
+    if not scaling_dict:
         logging.info('No deployment is configured for schedule scaling')
 
     return scaling_dict
-
-def hpa_job_creator():
-    """ Create CronJobs for configured hpa """
-
-    hpa__for_scale = hpa_for_scale()
-    print("[INFO]", datetime.datetime.now(), "HPA collected for scaling: ")
-    for namespace_hpa, schedules in hpa__for_scale.items():
-        namespace = namespace_hpa.split("/")[0]
-        hpa = namespace_hpa.split("/")[1]
-        for n in range(len(schedules)):
-            schedules_n = schedules[n]
-            minReplicas = schedules_n.get('minReplicas', None)
-            maxReplicas = schedules_n.get('maxReplicas', None)
-            schedule = schedules_n.get('schedule', None)
-            print("[INFO]", datetime.datetime.now(), "HPA: {}, Namespace: {}, MinReplicas: {}, MaxReplicas: {}, Schedule: {}".format(hpa, namespace, minReplicas, maxReplicas, schedule))
-
-            with open("/root/schedule_scaling/templates/hpa-script.py", 'r') as script:
-                script = script.read()
-            hpa_script = script % {
-                'namespace': namespace,
-                'name': hpa,
-                'minReplicas': minReplicas,
-                'maxReplicas': maxReplicas,
-                'time': EXECUTION_TIME,
-            }
-            i = 0
-            while os.path.exists("/tmp/scaling_jobs/%s-%s.py" % (hpa, i)):
-                i += 1
-            script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (hpa, i), "w")
-            script_creator.write(hpa_script)
-            script_creator.close()
-            cmd = ['sleep 1 ; . /root/.profile ; /usr/bin/python', script_creator.name,
-                   '2>&1 | tee -a', os.environ['SCALING_LOG_FILE']]
-            cmd = ' '.join(map(str, cmd))
-            scaling_cron = CronTab(user='root')
-            job = scaling_cron.new(command=cmd)
-            try:
-                job.setall(schedule)
-                job.set_comment("Scheduling_Jobs")
-                scaling_cron.write()
-            except Exception:
-                print("[ERROR]", datetime.datetime.now(),'HPA: {} has syntax error in the schedule'.format(hpa))
-                pass
 
 def hpa_for_scale():
     '''
     Getting the hpa configured for schedule scaling...
     '''
-    api = get_kube_api()
-    hpas = []
+
+    v1 = client.AutoscalingV1Api()
     scaling_dict = {}
-    for namespace in list(pykube.Namespace.objects(api)):
-        namespace = str(namespace)
-        for hpa in pykube.HorizontalPodAutoscaler.objects(api).filter(namespace=namespace):
-            annotations = hpa.metadata.get('annotations', {})
-            f_hpa = str(namespace + '/' + str(hpa))
 
-            schedule_actions = parse_content(annotations.get('zalando.org/schedule-actions', None), f_hpa)
+    hpas = v1.list_horizontal_pod_autoscaler_for_all_namespaces(watch=False)
 
-            if schedule_actions is None or len(schedule_actions) == 0:
-                continue
+    for i in hpas.items:
+        if schedule_actions_annotation in i.metadata.annotations:
+            hpa = str(i.metadata.namespace + '/' + str(i.metadata.name))
+            schedule_actions = parse_content(i.metadata.annotations[schedule_actions_annotation], hpa)
+            scaling_dict[hpa] = schedule_actions
 
-            hpas.append([hpa.metadata['name']])
-            scaling_dict[f_hpa] = schedule_actions
-    if not hpas:
+    if not scaling_dict:
         logging.info('No hpa is configured for schedule scaling')
 
     return scaling_dict
@@ -152,7 +87,7 @@ def deployment_job_creator():
             deployment_script = script % {
                 'namespace': namespace,
                 'name': deployment,
-                'replicas': replicas,
+                'replicas': int(replicas or -1),
                 'time': EXECUTION_TIME,
             }
             i = 0
@@ -172,6 +107,49 @@ def deployment_job_creator():
                 scaling_cron.write()
             except Exception:
                 print("[ERROR]", datetime.datetime.now(), 'Deployment: {} has syntax error in the schedule'.format(deployment))
+                pass
+
+def hpa_job_creator():
+    """ Create CronJobs for configured hpa """
+
+    hpa__for_scale = hpa_for_scale()
+    print("[INFO]", datetime.datetime.now(), "HPA collected for scaling: ")
+    for namespace_hpa, schedules in hpa__for_scale.items():
+        namespace = namespace_hpa.split("/")[0]
+        hpa = namespace_hpa.split("/")[1]
+        for n in range(len(schedules)):
+            schedules_n = schedules[n]
+            minReplicas = schedules_n.get('minReplicas', None)
+            maxReplicas = schedules_n.get('maxReplicas', None)
+            schedule = schedules_n.get('schedule', None)
+            print("[INFO]", datetime.datetime.now(), "HPA: {}, Namespace: {}, MinReplicas: {}, MaxReplicas: {}, Schedule: {}".format(hpa, namespace, minReplicas, maxReplicas, schedule))
+
+            with open("/root/schedule_scaling/templates/hpa-script.py", 'r') as script:
+                script = script.read()
+            hpa_script = script % {
+                'namespace': namespace,
+                'name': hpa,
+                'minReplicas': int(minReplicas or -1),
+                'maxReplicas': int(maxReplicas or -1),
+                'time': EXECUTION_TIME,
+            }
+            i = 0
+            while os.path.exists("/tmp/scaling_jobs/%s-%s.py" % (hpa, i)):
+                i += 1
+            script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (hpa, i), "w")
+            script_creator.write(hpa_script)
+            script_creator.close()
+            cmd = ['sleep 1 ; . /root/.profile ; /usr/bin/python', script_creator.name,
+                   '2>&1 | tee -a', os.environ['SCALING_LOG_FILE']]
+            cmd = ' '.join(map(str, cmd))
+            scaling_cron = CronTab(user='root')
+            job = scaling_cron.new(command=cmd)
+            try:
+                job.setall(schedule)
+                job.set_comment("Scheduling_Jobs")
+                scaling_cron.write()
+            except Exception:
+                print("[ERROR]", datetime.datetime.now(),'HPA: {} has syntax error in the schedule'.format(hpa))
                 pass
 
 def parse_content(content, identifier):
@@ -210,6 +188,14 @@ def parse_schedules(schedules, identifier):
         return []
 
 if __name__ == '__main__':
+
+    if os.getenv('KUBERNETES_SERVICE_HOST'):
+        # ServiceAccountの権限で実行する
+        config.load_incluster_config()
+    else:
+        # $HOME/.kube/config から読み込む
+        config.load_kube_config()
+
     create_job_directory()
     clear_cron()
     deployment_job_creator()
