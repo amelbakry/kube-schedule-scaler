@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 MAINTAINER "sakamoto@chatwork.com"
 
 # Install python tools and dev packages
@@ -11,7 +11,7 @@ RUN apt-get update \
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 RUN pip3 install --upgrade pip requests setuptools pipenv
-RUN pip3 install pykube-ng
+RUN pip3 install kubernetes==23.6.0
 RUN pip3 install python-crontab
 RUN pip3 install croniter
 
