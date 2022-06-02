@@ -39,7 +39,7 @@ datetime=`date "+%Y-%m-%d %H:%M:%S.%6N"`
 echo "[INFO] $datetime Creating the main cron"
 echo "
 ## The main script to collect the deployments to be scaled ##
-* * * * * sleep 7; . /root/.profile; /usr/bin/python /root/schedule_scaling/schedule_scaling.py >> ${SCALING_LOG_FILE} 2>&1
+*/3 * * * * sleep 7; . /root/.profile; /usr/bin/python /root/schedule_scaling/schedule_scaling.py >> ${SCALING_LOG_FILE} 2>&1
 " | /usr/bin/crontab -
 
 # Running the main Script at the beginning
