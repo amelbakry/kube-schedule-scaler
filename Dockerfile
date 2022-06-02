@@ -12,8 +12,8 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 RUN pip3 install --upgrade pip requests setuptools pipenv
 RUN pip3 install kubernetes==23.6.0
-RUN pip3 install python-crontab
-RUN pip3 install croniter
+RUN pip3 install python-crontab==2.6.0
+RUN pip3 install croniter==1.3.5
 
 ADD schedule_scaling /root/schedule_scaling
 COPY ./run_missed_jobs.py /root

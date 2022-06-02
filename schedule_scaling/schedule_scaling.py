@@ -12,14 +12,13 @@ import datetime
 
 EXECUTION_TIME = 'datetime.datetime.now().strftime("%d-%m-%Y %H:%M UTC")'
 schedule_actions_annotation = 'zalando.org/schedule-actions'
+temp__dir = '/tmp/scaling_jobs'
 
 def create_job_directory():
     """ This directory will hold the temp python scripts to execute the scaling jobs """
-    temp__dir = '/tmp/scaling_jobs'
     if os.path.isdir(temp__dir):
         shutil.rmtree(temp__dir)
     pathlib.Path(temp__dir).mkdir(parents=True, exist_ok=True)
-
 
 def clear_cron():
     """ This is needed so that if any one removes his scaling action
@@ -76,24 +75,23 @@ def deployment_job_creator():
     for namespace_deployment, schedules in deployments__for_scale.items():
         namespace = namespace_deployment.split("/")[0]
         deployment = namespace_deployment.split("/")[1]
-        for n in range(len(schedules)):
-            schedules_n = schedules[n]
-            replicas = schedules_n.get('replicas', None)
-            schedule = schedules_n.get('schedule', None)
-            print("[INFO]", datetime.datetime.now(), "Deployment: {}, Namespace: {}, Replicas: {}, Schedule: {}".format(deployment, namespace, replicas, schedule))
+        for i, contents in enumerate(schedules):
+            replicas = contents.get('replicas', None)
+            if replicas is None:
+                print("[ERROR]", datetime.datetime.now(), "{}, Deployment: {}, Namespace: {} is not set replicas".format(i, deployment, namespace))
+                continue
+            schedule = contents.get('schedule', None)
+            print("[INFO]", datetime.datetime.now(), "{}, Deployment: {}, Namespace: {}, Replicas: {}, Schedule: {}".format(i, deployment, namespace, replicas, schedule))
 
             with open("/root/schedule_scaling/templates/deployment-script.py", 'r') as script:
                 script = script.read()
             deployment_script = script % {
                 'namespace': namespace,
                 'name': deployment,
-                'replicas': int(replicas or -1),
+                'replicas': int(replicas),
                 'time': EXECUTION_TIME,
             }
-            i = 0
-            while os.path.exists("/tmp/scaling_jobs/%s-%s.py" % (deployment, i)):
-                i += 1
-            script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (deployment, i), "w")
+            script_creator = open(temp__dir + "/%s-deployment_%s-%s.py" % (namespace, deployment, i), "w")
             script_creator.write(deployment_script)
             script_creator.close()
             cmd = ['sleep 1 ; . /root/.profile ; /usr/bin/python', script_creator.name,
@@ -117,12 +115,20 @@ def hpa_job_creator():
     for namespace_hpa, schedules in hpa__for_scale.items():
         namespace = namespace_hpa.split("/")[0]
         hpa = namespace_hpa.split("/")[1]
-        for n in range(len(schedules)):
-            schedules_n = schedules[n]
-            minReplicas = schedules_n.get('minReplicas', None)
-            maxReplicas = schedules_n.get('maxReplicas', None)
-            schedule = schedules_n.get('schedule', None)
-            print("[INFO]", datetime.datetime.now(), "HPA: {}, Namespace: {}, MinReplicas: {}, MaxReplicas: {}, Schedule: {}".format(hpa, namespace, minReplicas, maxReplicas, schedule))
+        for i, contents in enumerate(schedules):
+            minReplicas = contents.get('minReplicas', None)
+            maxReplicas = contents.get('maxReplicas', None)
+
+            if maxReplicas == 0 or maxReplicas == '0':
+                print("[ERROR]", datetime.datetime.now(), "HPA: {}, Namespace: {},  MaxReplicas: {} is not set to 0".format(hpa, namespace, maxReplicas))
+                continue
+
+            if minReplicas == 0 or minReplicas == '0':
+                print("[ERROR]", datetime.datetime.now(), "HPA: {}, Namespace: {}, MinReplicas: {} is not set to 0".format(hpa, namespace, minReplicas))
+                continue
+
+            schedule = contents.get('schedule', None)
+            print("[INFO]", datetime.datetime.now(), "{}, HPA: {}, Namespace: {}, MinReplicas: {}, MaxReplicas: {}, Schedule: {}".format(i, hpa, namespace, minReplicas, maxReplicas, schedule))
 
             with open("/root/schedule_scaling/templates/hpa-script.py", 'r') as script:
                 script = script.read()
@@ -133,10 +139,7 @@ def hpa_job_creator():
                 'maxReplicas': int(maxReplicas or -1),
                 'time': EXECUTION_TIME,
             }
-            i = 0
-            while os.path.exists("/tmp/scaling_jobs/%s-%s.py" % (hpa, i)):
-                i += 1
-            script_creator = open("/tmp/scaling_jobs/%s-%s.py" % (hpa, i), "w")
+            script_creator = open(temp__dir + "/%s-hpa_%s-%s.py" % (namespace, hpa, i), "w")
             script_creator.write(hpa_script)
             script_creator.close()
             cmd = ['sleep 1 ; . /root/.profile ; /usr/bin/python', script_creator.name,
@@ -153,13 +156,13 @@ def hpa_job_creator():
                 pass
 
 def parse_content(content, identifier):
-    if content == None:
+    if content is None:
         return []
 
     if is_valid_url(content):
         schedules = fetch_schedule_actions_from_url(content)
 
-        if schedules == None:
+        if schedules is None:
             return []
 
         return parse_schedules(schedules, identifier)

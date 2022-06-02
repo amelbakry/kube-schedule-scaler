@@ -39,6 +39,11 @@ if maxReplicas > 0 and minReplicas > 0:
     else:
         print("[ERROR]", datetime.datetime.now(), ' Something went wrong... HPA %(namespace)s/%(name)s has not been scaled(maxReplicas to %(maxReplicas)s, minReplicas to %(minReplicas)s)')
 
+elif maxReplicas == 0 or minReplicas == 0:
+    print("[ERROR]", datetime.datetime.now(),
+          'Neither maxReplicas nor minReplicas can be set to 0. HPA %(namespace)s/%(name)s has not been scaled')
+    sys.exit(1)
+
 elif minReplicas > 0:
     current_hpa = v1.read_namespaced_horizontal_pod_autoscaler("%(name)s", "%(namespace)s")
     currentMaxReplicas = current_hpa.spec.max_replicas
@@ -75,7 +80,3 @@ elif maxReplicas > 0:
         print("[INFO]", datetime.datetime.now(), 'HPA %(namespace)s/%(name)s has been adjusted to maxReplicas to %(maxReplicas)s at', %(time)s)
     else:
         print("[ERROR]", datetime.datetime.now(), 'Something went wrong... HPA %(namespace)s/%(name)s has not been scaled(maxReplicas to %(maxReplicas)s)')
-
-elif maxReplicas == 0 or minReplicas == 0:
-    print("[ERROR]", datetime.datetime.now(),
-          'Neither maxReplicas nor minReplicas can be set to 0. HPA %(namespace)s/%(name)s has not been scaled')
